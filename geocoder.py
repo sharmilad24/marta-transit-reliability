@@ -1,6 +1,7 @@
 import sqlite3
 import pandas as pd
 import urllib.parse
+from functools import lru_cache
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
@@ -15,8 +16,12 @@ def get_db():
     return sqlite3.connect(db_uri, uri=True, timeout=30)
 
 
+@lru_cache(maxsize=256)
 def address_to_coords(address: str):
-    """Convert an address to (lat, lon). Returns None if not found."""
+    """
+    Convert an address to (lat, lon). Returns None if not found.
+    Cached so the same address is only looked up online once.
+    """
     try:
         # Try the address exactly as typed first — respects real city names
         location = geolocator.geocode(address, timeout=10, country_codes="us")

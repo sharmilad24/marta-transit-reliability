@@ -6,6 +6,7 @@ import joblib
 from datetime import time
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
+from router import find_trips_with_transfer
 
 DB_FILE = "marta_data.db"
 WALK_LIMIT_MILES = 1.5
@@ -69,6 +70,7 @@ def rail_stations():
     conn.close()
     return df
 
+@st.cache_data(show_spinner=False)
 def geocode(address):
     try:
         loc = geolocator.geocode(address, timeout=10, country_codes="us")
@@ -84,27 +86,8 @@ def nearest_station(lat, lon, stations):
     c = s.loc[s["dist"].idxmin()]
     return c["stop_name"], round(c["dist"], 2)
 
-def find_trips(from_station, to_station, after_time):
-    conn = get_db()
-    q = """
-    SELECT r.route_long_name AS line, dep.departure_time AS depart, arr.arrival_time AS arrive,
-           dep_s.stop_name AS from_stop, arr_s.stop_name AS to_stop,
-           ROUND((CAST(SUBSTR(arr.arrival_time,1,2) AS INT)*60+CAST(SUBSTR(arr.arrival_time,4,2) AS INT))
-                -(CAST(SUBSTR(dep.departure_time,1,2) AS INT)*60+CAST(SUBSTR(dep.departure_time,4,2) AS INT)),0) AS travel_min
-    FROM gtfs_stop_times dep
-    JOIN gtfs_stop_times arr ON dep.trip_id=arr.trip_id AND dep.stop_sequence<arr.stop_sequence
-    JOIN gtfs_trips t ON dep.trip_id=t.trip_id JOIN gtfs_routes r ON t.route_id=r.route_id
-    JOIN gtfs_stops dep_s ON dep.stop_id=dep_s.stop_id JOIN gtfs_stops arr_s ON arr.stop_id=arr_s.stop_id
-    WHERE dep_s.stop_name LIKE ? AND arr_s.stop_name LIKE ? AND dep.departure_time >= ?
-    ORDER BY dep.departure_time LIMIT 1
-    """
-    df = pd.read_sql_query(q, conn, params=(f"%{from_station}%", f"%{to_station}%", after_time))
-    conn.close()
-    return df
-
 def route_leg(from_station, to_station, after_time):
     """Use the proven router logic from router.py."""
-    from router import find_trips_with_transfer
     legs, transfer = find_trips_with_transfer(from_station, to_station, after_time)
     return legs, transfer
 
@@ -145,7 +128,7 @@ model = load_model()
 stations = rail_stations()
 
 if "waypoints" not in st.session_state:
-    st.session_state.waypoints = ["", ""]  # start, end
+    st.session_state.waypoints = ["", ""]
 
 st.markdown('<div class="section-label">Your Trip</div>', unsafe_allow_html=True)
 for i in range(len(st.session_state.waypoints)):
@@ -168,7 +151,7 @@ with cb:
             st.rerun()
 
 c1, c2 = st.columns(2)
-with c1: leave = st.time_input("Leave after", value=time(8,0))
+with c1: leave = st.time_input("Leaving time", value=time(8,0))
 with c2: day = st.selectbox("Day", ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"])
 dow = {"Sunday":0,"Monday":1,"Tuesday":2,"Wednesday":3,"Thursday":4,"Friday":5,"Saturday":6}[day]
 after = leave.strftime("%H:%M:%S")
@@ -190,7 +173,6 @@ if st.button("Plan my trip →"):
                 coords.append(c)
         if ok:
             current_time = after
-            # For each consecutive pair of waypoints, route a segment
             for seg in range(len(coords)-1):
                 from_st, from_dist = nearest_station(*coords[seg], stations)
                 to_st, to_dist = nearest_station(*coords[seg+1], stations)
@@ -210,7 +192,7 @@ if st.button("Plan my trip →"):
                         if idx == 1 and transfer:
                             st.markdown(f'<div class="transfer-note">🔄 Transfer at {TRANSFER} Station</div>', unsafe_allow_html=True)
                         render_train(tr, model, hour, dow)
-                    current_time = trains[-1]["arrive"]  # next segment leaves after this arrives
+                    current_time = trains[-1]["arrive"]
 
                 if to_dist > WALK_LIMIT_MILES:
                     st.markdown(f"""<div class="notice car-notice">🚗 <strong>Drive from finish</strong><br>
