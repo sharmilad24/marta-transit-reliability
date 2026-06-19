@@ -68,6 +68,31 @@ def plan_trip(from_station: str, to_station: str, leave_after: str):
         print(f"  Duration: {int(row['travel_min'])} minutes")
         print()
 
+def find_trips_with_transfer(from_station, to_station, after_time, transfer="Five Points"):
+    """
+    Find a trip that may require one transfer at Five Points.
+    Returns (legs_list, transfer_needed_bool).
+    Each leg is a dict with line, depart, arrive, from_stop, to_stop, travel_min.
+    """
+    # First try a direct trip
+    direct = find_trips(from_station, to_station, after_time)
+    if not direct.empty:
+        return [direct.iloc[0].to_dict()], False
+
+    # No direct trip — route through Five Points
+    leg1 = find_trips(from_station, transfer, after_time)
+    if leg1.empty:
+        return [], False  # can't even reach the transfer point
+
+    first = leg1.iloc[0].to_dict()
+    # Catch the next train from Five Points AFTER arriving there (+2 min buffer)
+    arrive_time = first["arrive"]
+    leg2 = find_trips(transfer, to_station, arrive_time)
+    if leg2.empty:
+        return [first], False  # got to Five Points but can't continue
+
+    second = leg2.iloc[0].to_dict()
+    return [first, second], True
 
 if __name__ == "__main__":
     plan_trip("Doraville", "Airport", "17:00:00")
