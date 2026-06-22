@@ -8,8 +8,8 @@ data pipeline.
 > **Unofficial project — not affiliated with or endorsed by MARTA.**
 
 ## 🔗 Live Links
-- **Trip Planner App:** [LIVE-APP-LINK-HERE](LIVE-APP-LINK-HERE)
-- **Power BI Dashboard:** [DASHBOARD-LINK-HERE](DASHBOARD-LINK-HERE)
+- **Trip Planner App:** [https://marta-trip-planner.streamlit.app/]
+- **Power BI Dashboard:** [https://app.powerbi.com/links/_HWksyzxs5?ctid=a7499e28-6a7f-48d9-8b14-d3e690989660&pbi_source=linkShare]
 
 ## What it does
 **Trip Planner** — type any two addresses; it geocodes them, finds the nearest
