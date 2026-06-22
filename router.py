@@ -2,7 +2,8 @@ import sqlite3
 import pandas as pd
 import urllib.parse
 
-DB_FILE = "marta_data.db"
+import os
+DB_FILE = "app_data.db" if os.path.exists("app_data.db") else "marta_data.db"
 
 
 def get_db():

@@ -5,8 +5,8 @@ from functools import lru_cache
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
-DB_FILE = "marta_data.db"
-
+import os
+DB_FILE = "app_data.db" if os.path.exists("app_data.db") else "marta_data.db"
 geolocator = Nominatim(user_agent="marta-trip-planner")
 
 

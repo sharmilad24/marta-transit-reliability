@@ -8,7 +8,8 @@ from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 from router import find_trips_with_transfer
 
-DB_FILE = "marta_data.db"
+import os
+DB_FILE = "app_data.db" if os.path.exists("app_data.db") else "marta_data.db"
 WALK_LIMIT_MILES = 1.5
 TRANSFER = "Five Points"
 
